@@ -61,7 +61,19 @@ namespace OmniSharp.Roslyn.CSharp.Services.Refactoring.V2
         {
             var codeFixesFromProjectReferences = project.AnalyzerReferences
                 .OfType<AnalyzerFileReference>()
-                .SelectMany(analyzerFileReference => GetConcreteTypes(analyzerFileReference.GetAssembly()))
+                .SelectMany(analyzerFileReference =>
+                {
+                    try
+                    {
+                        var assembly = analyzerFileReference.GetAssembly();
+                        return GetConcreteTypes(assembly);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to load analyzer assembly {Name}", analyzerFileReference.Display);
+                        return [];
+                    }
+                })
                 .Where(x => !x.IsAbstract && x.IsSubclassOf(typeof(CodeFixProvider)))
                 .Select(x =>
                 {
